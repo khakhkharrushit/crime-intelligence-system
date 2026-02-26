@@ -82,6 +82,20 @@ ARIMA(1,1,1) based on better generalization performance.
 ---
 
 ## 📂 Project Structure
+crimeintelligencesystem/
+│
+├── data/
+│ ├── raw/
+│ └── processed/
+│
+├── models/
+│ └── kmeans_hotspot_model.pkl
+│
+├── notebooks/
+│ ├── 01_data_exploration.ipynb
+│ └── 02_time_series_forecasting.ipynb
+│
+└── README.md
 
 
 ---
