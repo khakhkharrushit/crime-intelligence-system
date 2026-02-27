@@ -263,3 +263,7 @@ crimeintelligencesystem/
 - API deployment  
 - Hyperparameter optimization  
 - Real-time data streaming integration  
+
+## 🚀 Live Demo
+
+🔗 https://crime-intelligence-system-aa3zrcujca2iricnltfoty.streamlit.app
