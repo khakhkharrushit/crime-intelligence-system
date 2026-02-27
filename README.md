@@ -1,6 +1,6 @@
-# Crime Intelligence & Forecasting System
+# 🚔 Crime Intelligence & Forecasting System
 
-An end-to-end data science project that analyzes crime patterns, detects high-risk zones, and forecasts future crime trends using statistical and machine learning models.
+An end-to-end data science system that analyzes crime patterns, detects high-risk zones, and forecasts future crime trends using both statistical and machine learning models.
 
 ---
 
@@ -28,28 +28,36 @@ Key Features:
 - Latitude & Longitude  
 - Location Description  
 
+Two structured datasets were created:
+
+- `crime_intelligence_dataset.csv` → Spatial intelligence  
+- `daily_crime_series.csv` → Time-series forecasting  
+
 ---
 
-## 🗺 Week 1–2: Spatial Crime Intelligence
+## 🗺 Spatial Crime Intelligence (Week 1–2)
 
-### Techniques Used:
+### Techniques Used
 - KMeans Clustering
 - Outlier Removal
 - Risk Level Assignment
 - Cluster Centroid Extraction
 - Intelligence Dataset Export
 
-### Output:
+### Output
 - High / Medium / Low risk zones
 - Cluster summary table
 - Exported structured intelligence dataset
-- Saved clustering model (`kmeans_hotspot_model.pkl`)
+
+Model Saved:
+models/kmeans_hotspot_model.pkl
+
 
 ---
 
-## 📈 Week 3: Statistical Time-Series Forecasting
+## 📈 Statistical Time-Series Forecasting (Week 3)
 
-### Steps Performed:
+### Steps Performed
 - Daily aggregation of crime counts
 - Moving averages (7-day, 30-day)
 - Stationarity testing (ADF Test)
@@ -69,12 +77,13 @@ ARIMA was selected as the better statistical baseline model.
 
 ---
 
-## 🤖 Week 4: Machine Learning Forecasting
+## 🤖 Machine Learning Forecasting (Week 4)
 
 ### Feature Engineering
 - Lag features (1, 7, 30 days)
 - Rolling mean features
-- Month and weekday encoding
+- Month encoding
+- Weekday encoding
 
 ### Models Trained
 - Random Forest Regressor
@@ -84,28 +93,95 @@ ARIMA was selected as the better statistical baseline model.
 
 | Model | RMSE |
 |--------|--------|
-| Random Forest | 48.31 |
+| Random Forest | **48.31** |
 | XGBoost | 49.13 |
 
-### Final Selected Model
+---
+
+## ✅ Final Production Model
 
 **Random Forest Regressor**
 
 - Lowest RMSE  
-- Strong generalization  
-- Residuals randomly distributed  
-- No significant overfitting  
+- Reduced error by more than 50% compared to ARIMA  
+- Strong generalization performance  
+- Stable residual behavior  
 
-Machine learning significantly outperformed statistical models.
+Production model saved as:
 
 ---
 
-## 📊 Final Model Performance Summary
+## 📈 Statistical Time-Series Forecasting (Week 3)
 
-| Category | Best Model | RMSE |
-|------------|-------------|--------|
-| Statistical | ARIMA | 106.97 |
-| Machine Learning | Random Forest | **48.31** |
+### Steps Performed
+- Daily aggregation of crime counts
+- Moving averages (7-day, 30-day)
+- Stationarity testing (ADF Test)
+- Differencing for stationarity
+- ARIMA modeling
+- SARIMA modeling
+- Model comparison using RMSE
+
+### Statistical Model Comparison
+
+| Model | RMSE |
+|--------|--------|
+| ARIMA(1,1,1) | 106.97 |
+| SARIMA | 136.19 |
+
+ARIMA was selected as the better statistical baseline model.
+
+---
+
+## 🤖 Machine Learning Forecasting (Week 4)
+
+### Feature Engineering
+- Lag features (1, 7, 30 days)
+- Rolling mean features
+- Month encoding
+- Weekday encoding
+
+### Models Trained
+- Random Forest Regressor
+- XGBoost Regressor
+
+### Machine Learning Model Comparison
+
+| Model | RMSE |
+|--------|--------|
+| Random Forest | **48.31** |
+| XGBoost | 49.13 |
+
+---
+
+## ✅ Final Production Model
+
+**Random Forest Regressor**
+
+- Lowest RMSE  
+- Reduced error by more than 50% compared to ARIMA  
+- Strong generalization performance  
+- Stable residual behavior  
+
+Production model saved as:
+models/final_forecast_model.pkl
+
+
+---
+
+## 🖥 Interactive Dashboard (Week 5)
+
+Built using **Streamlit**, featuring:
+
+- Multi-day crime forecasting
+- Historical vs forecast visualization
+- Risk zone filtering
+- Interactive crime hotspot map
+- Model performance comparison panel
+
+Run locally:
+streamlit run app/app.py
+
 
 ---
 
@@ -114,11 +190,29 @@ Machine learning significantly outperformed statistical models.
 - Python
 - Pandas
 - NumPy
-- Matplotlib
-- Seaborn
 - Scikit-learn
 - XGBoost
 - Statsmodels
+- Matplotlib / Seaborn
+- Streamlit
+- Joblib
+
+---
+
+## 📂 Project Structure
+
+---
+
+## 🛠 Tech Stack
+
+- Python
+- Pandas
+- NumPy
+- Scikit-learn
+- XGBoost
+- Statsmodels
+- Matplotlib / Seaborn
+- Streamlit
 - Joblib
 
 ---
@@ -129,35 +223,43 @@ crimeintelligencesystem/
 ├── data/
 │ ├── raw/
 │ └── processed/
+│ ├── crime_intelligence_dataset.csv
+│ └── daily_crime_series.csv
 │
 ├── models/
-│ └── kmeans_hotspot_model.pkl
+│ ├── kmeans_hotspot_model.pkl
+│ └── final_forecast_model.pkl
 │
 ├── notebooks/
 │ ├── 01_data_exploration.ipynb
 │ ├── 02_time_series_forecasting.ipynb
 │ └── 03_machine_learning_models.ipynb
 │
+├── app/
+│ └── app.py
+│
 ├── requirements.txt
 └── README.md
 
----
-
-## 🚀 Future Improvements
-
-- Real-time crime forecasting
-- Crime-type specific prediction
-- Streamlit interactive dashboard
-- Model deployment as API
-- Hyperparameter tuning & cross-validation
 
 ---
 
 ## 🎯 Project Highlights
 
 - End-to-end ML pipeline  
-- Spatial + Temporal intelligence  
-- Statistical + ML model comparison  
+- Spatial + Temporal crime intelligence  
+- Statistical vs Machine Learning comparison  
 - Feature engineering for time-series regression  
-- Model generalization & residual diagnostics  
-- Production-style structured repository  
+- Production model freezing  
+- Interactive deployment using Streamlit  
+- Clean modular architecture  
+
+---
+
+## 🚀 Future Improvements
+
+- Crime-type specific forecasting  
+- District-level modeling  
+- API deployment  
+- Hyperparameter optimization  
+- Real-time data streaming integration  
