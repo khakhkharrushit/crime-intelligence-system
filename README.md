@@ -267,3 +267,4 @@ crimeintelligencesystem/
 ## 🚀 Live Demo
 
 🔗 https://crime-intelligence-system-aa3zrcujca2iricnltfoty.streamlit.app
+https://khakhkharrushit.github.io/crime-intelligence-system/
