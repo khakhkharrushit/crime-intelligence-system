@@ -8,6 +8,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -40,6 +43,18 @@ tr:hover td{background:#00ffe710}
 .nav-tile{padding:16px 18px;border-left:3px solid var(--c);cursor:pointer;transition:all .2s}
 .nav-tile:hover{background:#132040;box-shadow:0 0 20px #00000040}
 canvas{max-width:100%}
+.leaflet-popup-content-wrapper{background:#0f1a2e!important;border:none!important;box-shadow:0 4px 20px #00000060!important;padding:0!important}
+.leaflet-popup-content{margin:0!important}
+.leaflet-popup-tip{background:#0f1a2e!important}
+.leaflet-popup-close-button{color:#6b90b8!important;font-size:16px!important;padding:6px!important}
+#chicago-map{height:420px;width:100%;border-radius:10px;border:1px solid #182840;z-index:1}
+.leaflet-container{background:#0b1220 !important}
+.leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(0.75) saturate(0.6)}
+.risk-pin{width:28px;height:28px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:"Space Mono",monospace;color:#060b12}
+.chart-wrap{position:relative;height:200px;width:100%}
+.chart-wrap-tall{position:relative;height:260px;width:100%}
+.chart-wrap-bar{position:relative;height:220px;width:100%}
+.chart-wrap-donut{position:relative;height:260px;width:100%}
 </style>
 </head>
 <body>
@@ -151,35 +166,37 @@ function UploadBtn({label,loaded,onLoad}){
 }
 
 // ── Chart.js wrappers ────────────────────────────────────────────────────────
-function LineChartComp({data,color=C.accent,label="Value",height=200}){
+function LineChartComp({data,color=C.accent,label="Value"}){
   const ref=useRef();const chartRef=useRef();
   useEffect(()=>{
     if(!ref.current||!data.length)return;
-    if(chartRef.current)chartRef.current.destroy();
-    chartRef.current=new Chart(ref.current,{type:"line",data:{labels:data.map(d=>d.date||d.day),datasets:[{label,data:data.map(d=>d.count||d.predicted),borderColor:color,backgroundColor:color+"28",fill:true,tension:.4,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false,backgroundColor:C.surface,borderColor:C.border,borderWidth:1,titleColor:C.textPrimary,bodyColor:color}},scales:{x:{ticks:{color:C.textMuted,maxTicksLimit:8,font:{size:10}},grid:{color:C.border}},y:{ticks:{color:C.textMuted,font:{size:10}},grid:{color:C.border}}}}});
-    return()=>{if(chartRef.current)chartRef.current.destroy();};
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    const ctx=ref.current.getContext("2d");
+    chartRef.current=new Chart(ctx,{type:"line",data:{labels:data.map(d=>d.date||d.day),datasets:[{label,data:data.map(d=>d.count||d.predicted),borderColor:color,backgroundColor:color+"28",fill:true,tension:.4,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false,backgroundColor:C.surface,borderColor:C.border,borderWidth:1,titleColor:C.textPrimary,bodyColor:color}},scales:{x:{ticks:{color:C.textMuted,maxTicksLimit:8,font:{size:10}},grid:{color:C.border}},y:{ticks:{color:C.textMuted,font:{size:10}},grid:{color:C.border}}}}});
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
   },[data,color,label]);
-  return h("canvas",{ref,style:{height}});
+  return h("div",{className:"chart-wrap"},[h("canvas",{ref})]);
 }
-function ForecastChart({actual,forecast,days,lastCount}){
+function ForecastChart({actual,forecast}){
   const ref=useRef();const chartRef=useRef();
   useEffect(()=>{
     if(!ref.current)return;
-    if(chartRef.current)chartRef.current.destroy();
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
     const labels=[...actual.slice(-30).map(d=>d.date),...forecast.map(d=>d.day)];
     const actData=[...actual.slice(-30).map(d=>d.count),...Array(forecast.length).fill(null)];
     const fctData=[...Array(30).fill(null),...forecast.map(d=>d.predicted)];
     const upperData=[...Array(30).fill(null),...forecast.map(d=>d.upper)];
     const lowerData=[...Array(30).fill(null),...forecast.map(d=>d.lower)];
-    chartRef.current=new Chart(ref.current,{type:"line",data:{labels,datasets:[
+    const ctx=ref.current.getContext("2d");
+    chartRef.current=new Chart(ctx,{type:"line",data:{labels,datasets:[
       {label:"Actual",data:actData,borderColor:C.accent,backgroundColor:C.accent+"20",fill:true,tension:.4,pointRadius:0,borderWidth:2},
-      {label:"Forecast",data:fctData,borderColor:C.blue,backgroundColor:C.blue+"18",fill:true,tension:.4,pointRadius:3,borderWidth:2,borderDash:[0]},
+      {label:"Forecast",data:fctData,borderColor:C.blue,backgroundColor:C.blue+"18",fill:true,tension:.4,pointRadius:3,borderWidth:2},
       {label:"Upper CI",data:upperData,borderColor:C.blue+"60",backgroundColor:"transparent",fill:false,tension:.4,pointRadius:0,borderWidth:1,borderDash:[4,4]},
       {label:"Lower CI",data:lowerData,borderColor:C.blue+"60",backgroundColor:"transparent",fill:false,tension:.4,pointRadius:0,borderWidth:1,borderDash:[4,4]},
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:C.textSecondary,font:{size:10}}},tooltip:{mode:"index",intersect:false,backgroundColor:C.surface,borderColor:C.border,borderWidth:1,titleColor:C.textPrimary}},scales:{x:{ticks:{color:C.textMuted,maxTicksLimit:10,font:{size:10}},grid:{color:C.border}},y:{ticks:{color:C.textMuted,font:{size:10}},grid:{color:C.border}}}}});
-    return()=>{if(chartRef.current)chartRef.current.destroy();};
+    ]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},plugins:{legend:{labels:{color:C.textSecondary,font:{size:10}}},tooltip:{mode:"index",intersect:false,backgroundColor:C.surface,borderColor:C.border,borderWidth:1,titleColor:C.textPrimary}},scales:{x:{ticks:{color:C.textMuted,maxTicksLimit:10,font:{size:10}},grid:{color:C.border}},y:{ticks:{color:C.textMuted,font:{size:10}},grid:{color:C.border}}}}});
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
   },[actual,forecast]);
-  return h("canvas",{ref,style:{height:260}});
+  return h("div",{className:"chart-wrap-tall"},[h("canvas",{ref})]);
 }
 function BarChartComp({data}){
   const ref=useRef();const chartRef=useRef();
@@ -189,7 +206,7 @@ function BarChartComp({data}){
     chartRef.current=new Chart(ref.current,{type:"bar",data:{labels:data.map(d=>d.model),datasets:[{label:"RMSE",data:data.map(d=>d.rmse),backgroundColor:data.map(d=>d.color+"cc"),borderColor:data.map(d=>d.color),borderWidth:2,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:C.surface,borderColor:C.border,borderWidth:1,titleColor:C.textPrimary,bodyColor:C.textSecondary}},scales:{x:{ticks:{color:C.textMuted,font:{size:11}},grid:{color:C.border}},y:{ticks:{color:C.textMuted,font:{size:10}},grid:{color:C.border}}}}});
     return()=>{if(chartRef.current)chartRef.current.destroy();};
   },[data]);
-  return h("canvas",{ref,style:{height:220}});
+  return h("div",{className:"chart-wrap-bar"},[h("canvas",{ref})]);
 }
 function DonutChartComp({data}){
   const ref=useRef();const chartRef=useRef();
@@ -199,50 +216,75 @@ function DonutChartComp({data}){
     chartRef.current=new Chart(ref.current,{type:"doughnut",data:{labels:data.map(d=>d.cluster),datasets:[{data:data.map(d=>d.count),backgroundColor:data.map(d=>riskCol(d.risk)+"cc"),borderColor:data.map(d=>riskCol(d.risk)),borderWidth:2,hoverOffset:10}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:C.textSecondary,padding:12,font:{size:11}}},tooltip:{backgroundColor:C.surface,borderColor:C.border,borderWidth:1,titleColor:C.textPrimary,bodyColor:C.textSecondary,callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.toLocaleString()} (${data[ctx.dataIndex].pct}%)`}}}}});
     return()=>{if(chartRef.current)chartRef.current.destroy();};
   },[data]);
-  return h("canvas",{ref,style:{height:260}});
+  return h("div",{className:"chart-wrap-donut"},[h("canvas",{ref})]);
 }
 
-// ── SVG Risk Map ─────────────────────────────────────────────────────────────
+// ── Leaflet Chicago Risk Map ─────────────────────────────────────────────────
 function RiskMap({points,zones,filter}){
-  const [hov,setHov]=useState(null);
-  const W=640,H=360,pad=36;
-  const vis=useMemo(()=>{const f=filter==="All"?"All":filter;return{pts:f==="All"?points:points.filter(p=>p.risk.toLowerCase().includes(f.toLowerCase())),zns:f==="All"?zones:zones.filter(z=>z.risk.toLowerCase().includes(f.toLowerCase()))};
+  const mapRef=useRef();const leafRef=useRef();const layersRef=useRef([]);
+  const vis=useMemo(()=>{
+    const f=filter==="All"?"All":filter;
+    return{
+      pts:f==="All"?points:points.filter(p=>p.risk.toLowerCase().includes(f.toLowerCase())),
+      zns:f==="All"?zones:zones.filter(z=>z.risk.toLowerCase().includes(f.toLowerCase()))
+    };
   },[points,zones,filter]);
-  const lats=points.map(p=>p.lat),lons=points.map(p=>p.lon);
-  const minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons);
-  const px=lon=>pad+((lon-minLon)/(maxLon-minLon||1))*(W-pad*2);
-  const py=lat=>(H-pad)-((lat-minLat)/(maxLat-minLat||1))*(H-pad*2);
-  const heat=useMemo(()=>{const COLS=18,ROWS=11,grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));vis.pts.forEach(pt=>{const c=Math.floor(((pt.lon-minLon)/(maxLon-minLon||1))*(COLS-1)),r=ROWS-1-Math.floor(((pt.lat-minLat)/(maxLat-minLat||1))*(ROWS-1));if(c>=0&&c<COLS&&r>=0&&r<ROWS)grid[r][c]++;});const mv=Math.max(...grid.flat(),1);return{grid,mv,COLS,ROWS};},[vis.pts,minLat,maxLat,minLon,maxLon]);
-  
-  return h("div",{style:{position:"relative",overflowX:"auto"}},[
-    h("svg",{width:W,height:H,style:{position:"absolute",top:0,left:0,pointerEvents:"none"}},
-      heat.grid.flatMap((row,r)=>row.map((v,c)=>{const i=v/heat.mv;if(i<0.06)return null;const cW=(W-pad*2)/heat.COLS,cH=(H-pad*2)/heat.ROWS,x=pad+c*cW,y=pad+r*cH,col=i>.65?C.red:i>.3?C.amber:C.accent;return h("rect",{key:`h${r}-${c}`,x,y,width:cW,height:cH,fill:col,opacity:i*.38,rx:2});})).filter(Boolean)
-    ),
-    h("svg",{width:W,height:H,style:{background:C.surface,borderRadius:10,border:`1px solid ${C.border}`,display:"block"}},[
-      ...[.25,.5,.75].map(t=>h("g",{key:t},[
-        h("line",{x1:pad,y1:pad+t*(H-pad*2),x2:W-pad,y2:pad+t*(H-pad*2),stroke:C.border,strokeWidth:.5}),
-        h("line",{x1:pad+t*(W-pad*2),y1:pad,x2:pad+t*(W-pad*2),y2:H-pad,stroke:C.border,strokeWidth:.5}),
-      ])),
-      ...vis.pts.filter((_,i)=>i%4===0).map((pt,i)=>h("circle",{key:`d${i}`,cx:px(pt.lon),cy:py(pt.lat),r:2.5,fill:riskCol(pt.risk),opacity:.5})),
-      ...vis.zns.map((z,i)=>{const x=px(z.lon),y=py(z.lat),col=riskCol(z.risk),isH=hov===z.id;
-        return h("g",{key:`z${i}`,style:{cursor:"pointer"},onMouseEnter:()=>setHov(z.id),onMouseLeave:()=>setHov(null)},[
-          isH&&h("circle",{cx:x,cy:y,r:20,fill:"none",stroke:col,strokeWidth:1,opacity:.35}),
-          h("circle",{cx:x,cy:y,r:isH?12:8,fill:col,opacity:.9,style:{filter:`drop-shadow(0 0 8px ${col})`,transition:"r .15s"}}),
-          h("text",{x,y:y+1,textAnchor:"middle",dominantBaseline:"middle",fontSize:7,fontWeight:700,fill:C.bg},z.incidents>999?"1k+":z.incidents),
-          isH&&h("g",{},[
-            h("rect",{x:x+14,y:y-24,width:130,height:38,rx:5,fill:C.card,stroke:col,strokeWidth:1}),
-            h("text",{x:x+20,y:y-10,fontSize:9,fontWeight:700,fill:C.textPrimary},z.zone),
-            h("text",{x:x+20,y:y+2,fontSize:8,fill:col},`${z.risk} · ${z.incidents.toLocaleString()}`),
-          ]),
-        ].filter(Boolean));
-      }),
-      h("text",{x:W/2,y:H-5,textAnchor:"middle",fontSize:9,fill:C.textMuted},"Longitude"),
-      h("text",{x:9,y:H/2,textAnchor:"middle",fontSize:9,fill:C.textMuted,transform:`rotate(-90,9,${H/2})`},"Latitude"),
-    ]),
-    h("div",{style:{position:"absolute",top:10,right:10,background:C.card+"ee",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px"}},[
-      ...["High","Medium","Low"].map(r=>div({key:r,style:{display:"flex",alignItems:"center",gap:6,fontSize:10,color:C.textSecondary,fontFamily:"'Space Mono',monospace",marginBottom:3}},[
-        div({style:{width:7,height:7,borderRadius:"50%",background:riskCol(r)}}),r
-      ]))
+
+  // Init map once
+  useEffect(()=>{
+    if(!mapRef.current||leafRef.current)return;
+    leafRef.current=L.map(mapRef.current,{center:[41.83,-87.65],zoom:11,zoomControl:true});
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      attribution:"© OpenStreetMap",maxZoom:18
+    }).addTo(leafRef.current);
+    // Dark overlay for style matching
+    leafRef.current.getContainer().style.background="#0b1220";
+    return()=>{if(leafRef.current){leafRef.current.remove();leafRef.current=null;}};
+  },[]);
+
+  // Update layers when data/filter changes
+  useEffect(()=>{
+    if(!leafRef.current)return;
+    // Clear old layers
+    layersRef.current.forEach(l=>leafRef.current.removeLayer(l));
+    layersRef.current=[];
+
+    // Heatmap layer from incident points
+    if(vis.pts.length>0){
+      const heatPts=vis.pts.filter((_,i)=>i%3===0).map(p=>[p.lat,p.lon,0.6]);
+      const heat=L.heatLayer(heatPts,{
+        radius:22,blur:18,maxZoom:13,
+        gradient:{0.0:"#00ffe7",0.4:"#ffa502",0.7:"#ff4757",1.0:"#ff0000"}
+      }).addTo(leafRef.current);
+      layersRef.current.push(heat);
+    }
+
+    // Zone circle markers
+    vis.zns.forEach(z=>{
+      const col=z.risk.toLowerCase().includes("high")?"#ff4757":z.risk.toLowerCase().includes("med")?"#ffa502":"#00ffe7";
+      const circle=L.circleMarker([z.lat,z.lon],{
+        radius:14,fillColor:col,color:col,weight:2,opacity:0.9,fillOpacity:0.75
+      }).bindPopup(
+        `<div style="font-family:Space Mono,monospace;background:#0f1a2e;color:#e2f0ff;padding:10px;border-radius:8px;border:1px solid ${col};min-width:160px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">${z.zone}</div>
+          <div style="color:${col};font-size:11px">${z.risk}</div>
+          <div style="color:#6b90b8;font-size:11px;margin-top:4px">${z.incidents.toLocaleString()} incidents</div>
+         </div>`,
+        {className:"dark-popup",maxWidth:200}
+      ).addTo(leafRef.current);
+      layersRef.current.push(circle);
+    });
+  },[vis]);
+
+  return h("div",{style:{position:"relative"}},[
+    h("div",{ref:mapRef,id:"chicago-map"}),
+    // Legend overlay
+    h("div",{style:{position:"absolute",bottom:20,right:10,zIndex:1000,background:C.card+"ee",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px"}},[
+      h("div",{style:{fontSize:9,color:C.textMuted,fontFamily:"'Space Mono',monospace",marginBottom:6,letterSpacing:".1em"}},["RISK LEVEL"]),
+      ...["High","Medium","Low"].map(r=>{const col=riskCol(r);return h("div",{key:r,style:{display:"flex",alignItems:"center",gap:7,fontSize:10,color:C.textSecondary,fontFamily:"'Space Mono',monospace",marginBottom:4}},[
+        h("div",{style:{width:10,height:10,borderRadius:"50%",background:col,boxShadow:`0 0 5px ${col}`}}),r
+      ]);}),
+      h("div",{style:{borderTop:`1px solid ${C.border}`,paddingTop:6,marginTop:4,fontSize:9,color:C.textMuted}},["● Zones  🔥 Heatmap"]),
     ]),
   ]);
 }
@@ -520,7 +562,7 @@ function App(){
       ]),
       div({className:"card",style:{padding:"20px 22px"}},[
         h(SectionTitle,{title:"Multi-Day Forecast",sub:"Iterative Random Forest predictions with confidence band"}),
-        h(ForecastChart,{actual:daily,forecast,days:fd,lastCount}),
+        h(ForecastChart,{actual:daily,forecast}),
         div({style:{marginTop:10,padding:"9px 12px",background:C.blue+"10",border:`1px solid ${C.blue}28`,borderRadius:7,fontSize:11,color:C.textSecondary}},["ℹ️ Each step feeds predictions as lag features into the next — iterative multi-step forecasting using the production Random Forest Regressor."]),
       ]),
     ]),
